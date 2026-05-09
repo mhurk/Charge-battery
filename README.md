@@ -1,7 +1,7 @@
 (this is very draft)
 
-# Charge-battery with Home Assistant
-The goal is to be able to charge the home battery with cheap energy during the night. But only if the expected solar production of the following day is not sufficient. Or if the battery is almost emty and some energy is needed to cover the (expensive) peak prices in the morning.
+# Charge home battery with Home Assistant
+The goal is to be able to charge the home battery with cheap energy during the night. But only if the expected solar production of the following day is not sufficient. Or if the battery is almost empty and some energy is needed to cover the (expensive) peak prices in the morning.
 
 ## Components
 The following components are needed to setup this service. I mentioned the version numbers I have used during the development of this code.
