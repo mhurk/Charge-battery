@@ -1,4 +1,7 @@
-(this is very draft)
+
+![Message](https://img.shields.io/badge/First%20version-8A2BE2)
+![GitHub Created At](https://img.shields.io/github/created-at/mhurk/Charge-battery)
+![GitHub last commit](https://img.shields.io/github/last-commit/mhurk/Charge-battery)
 
 # Charge home battery with Home Assistant
 The goal is to be able to charge the home battery with cheap energy during the night. But only if the expected solar production of the following day is not sufficient. Or if the battery is almost empty and some energy is needed to cover the (expensive) peak prices in the morning. It is *Not* intended for trading purposes or peak shaving, the only goal is to optimise self use at the best prices.
@@ -90,5 +93,5 @@ Functions that are preceeded by <code>@service</code> are available to run manua
 
 If all is okay the charging plans are visible in the logfiles. These can be accessed on different ways but I prefer via the Terminal/SSH as that enables quick filtering. <code>ha core logs \| grep BatteryOpt</code> gives the most recent plan but make sure to do this quickly after sending the command otherwise is will be gone again (so a bit tricky)
 
-Example logfile:
+Example logfile entry:
 ![](pics/teminal.png)
