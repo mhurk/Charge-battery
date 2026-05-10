@@ -91,4 +91,4 @@ Functions that are preceeded by <code>@service</code> are available to run manua
 If all is okay the charging plans are visible in the logfiles. These can be accessed on different ways but I prefer via the Terminal/SSH as that enables quick filtering. <code>ha core logs \| grep BatteryOpt</code> gives the most recent plan but make sure to do this quickly after sending the command otherwise is will be gone again (so a bit tricky)
 
 Example logfile:
-![](file://bigstation/data/Home%20Assistant/AlhaESS_optimizer%20%28python%29/Charge-battery/pics/teminal.png)
+![](pics/teminal.png)
