@@ -1,11 +1,9 @@
 (this is very draft)
 
 # Charge home battery with Home Assistant
-
-The goal is to be able to charge the home battery with cheap energy during the night. But only if the expected solar production of the following day is not sufficient. Or if the battery is almost empty and some energy is needed to cover the (expensive) peak prices in the morning.
+The goal is to be able to charge the home battery with cheap energy during the night. But only if the expected solar production of the following day is not sufficient. Or if the battery is almost empty and some energy is needed to cover the (expensive) peak prices in the morning. It is *Not* intended for trading purposes or peak shaving, the only goal is to optimise self use at the best prices.
 
 ## Components
-
 The following components are needed to setup this service. I mentioned the version numbers I have used during the development of this code.
 
 -   Home Assistant 2026.5.1
@@ -16,7 +14,6 @@ The following components are needed to setup this service. I mentioned the versi
 -   Terminal & SSH for troubleshooting and testing.
 
 ## Configuration
-
 Add this to <code>configuration.yaml</code> to enable pyscript to import the required libraries
 
 ```         
@@ -47,7 +44,6 @@ MIN_CHARGE_KWH       = 0.5    # Skip if less than this is needed
 MAX_PRICE_EUR        = 0.25   # Never charge above this price (€/kWh)
 MIN_SOC_FLOOR_PCT    = 20     # Always charge to at least this SOC %
 
-
 SOLAR_SENSOR    = "sensor.energy_production_tomorrow"
 SOC_SENSOR      = "sensor.alpha_ess_energy_statistics_ald071026xxxxxx_ald071026xxxxxx_instantaneous_battery_soc"
 NORDPOOL_SENSOR = "sensor.nordpool_kwh_nl_eur_3_095_021"
@@ -61,8 +57,7 @@ BTN_RST  = f"{BTN_BASE}_reset_charge_discharge"
 ```
 
 ## File location and start
-
-make sure the pythin file is on the correct location, Home Assistant (the Pyscript integration) expects it in <code>pyscript/</code>, so the folder should be at the same level as configuration.yaml. Do not create subfolders because the script will not be found.
+Make sure the pythin file is on the correct location, Home Assistant (the Pyscript integration) expects it in <code>pyscript/</code>, so the folder should be at the same level as configuration.yaml. Do not create subfolders because the script will not be found.
 
 Copy the script to the correct location and activate it via Developer Tools → YAML → Pyscript Python scripting. This needs to be done after each change to the code.
 
@@ -91,7 +86,9 @@ content: |
 Which looks a bit like this ![](pics/markdown_card.png)
 
 ## Testing and debugging
+Functions that are preceeded by <code>@service</code> are available to run manually from Developer Tools → Actions. If the functions are not there, there is an issue with starting the script, maybe it is in the wrong location or pyscript did not start. <code>pyscript.simple_test</code>, as part of <code>debug_test.py</code>, is a function which you can use for testing if everything works. <code>pyscript.plan_night_charging_afternoon</code> can also be run safely, it plans the nightly chage based on the available data but does not actually start charging. It does update the markdown card so it is a complete test.
 
-Functions that are preceeded by <code>@service</code> are available to run manually from Developer Tools → Actions. If the functions are not there, there is an ssue with starting the script, maybe it is in the wrong location or pyscript did not start. <code>pyscript.simple_test</code>, as part of <code>debug_test.py</code>, is a function which you can use for testing if everything works. <code>plan_night_charging_afternoon</code> can also be run safely, it plans the nightly chage based on the available data but does not actually start charging. It does update the markdown card so it is a complete test.
+If all is okay the charging plans are visible in the logfiles. These can be accessed on different ways but I prefer via the Terminal/SSH as that enables quick filtering. <code>ha core logs \| grep BatteryOpt</code> gives the most recent plan but make sure to do this quickly after sending the command otherwise is will be gone again (so a bit tricky)
 
-If all is okay the charging plans are visible in the logfiles. These can be accessed on different ways but I prefer via the Terminal/SSH as that enbles quick filtering. <code>ha core logs \| grep BatteryOpt</code> gives the most recent plan but make sure to do this quickly after sending the command otherwise is will be gone again (so a bit tricky)
+Example logfile:
+![](file://bigstation/data/Home%20Assistant/AlhaESS_optimizer%20%28python%29/Charge-battery/pics/teminal.png)
