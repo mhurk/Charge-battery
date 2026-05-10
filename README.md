@@ -19,7 +19,7 @@ The following components are needed to setup this service. I mentioned the versi
 ## Configuration
 Add this to <code>configuration.yaml</code> to enable pyscript to import the required libraries
 
-```         
+```env         
 pyscript:
   allow_all_imports: true
   hass_is_global: true
@@ -27,7 +27,7 @@ pyscript:
 
 And
 
-```         
+```env         
 logger:
   default: warning
   logs:
@@ -38,7 +38,7 @@ To enable the logger to log all activities. This is needed for debugging and to 
 
 Make changes to <code>smart_battery_charg.py</code> such that it matches your system and wishes. If you have renamed your Alpha ESS you need to change that here as well. I just use the default name with the serial numbers. Also update the NordPool sensor for your situation. The script uses the 15, 30, and 60 minute charge buttons which are available in the Alpha ESS integration. It basically presses these buttons during the night if the requirements (low price and low solar power next day) are met.
 
-```         
+```env         
 BATTERY_CAPACITY_KWH = 9.3
 CHARGE_RATE_KW       = 2.4    # Your alphaESS max charge rate (kW)
 NIGHT_START_HOUR     = 23     # Start of cheap night window
@@ -77,7 +77,7 @@ These helpers can be used in your dashboard to show the planned info on a MarkDo
 
 Example MarkDown card:
 
-```         
+```env         
 type: markdown
 title: Battery Charging Plan
 content: |
@@ -86,12 +86,13 @@ content: |
   {{ states('input_text.batteryopt_detail') }}
 ```
 
-Which looks a bit like this ![](pics/markdown_card.png)
+Which looks like this:\
+![](pics/markdown_card.png)
 
 ## Testing and debugging
 Functions that are preceeded by <code>@service</code> are available to run manually from Developer Tools → Actions. If the functions are not there, there is an issue with starting the script, maybe it is in the wrong location or pyscript did not start. <code>pyscript.simple_test</code>, as part of <code>debug_test.py</code>, is a function which you can use for testing if everything works. <code>pyscript.plan_night_charging_afternoon</code> can also be run safely, it plans the nightly chage based on the available data but does not actually start charging. It does update the markdown card so it is a complete test.
 
 If all is okay the charging plans are visible in the logfiles. These can be accessed on different ways but I prefer via the Terminal/SSH as that enables quick filtering. <code>ha core logs \| grep BatteryOpt</code> gives the most recent plan but make sure to do this quickly after sending the command otherwise is will be gone again (so a bit tricky)
 
-Example logfile entry:
+Example logfile entry:\
 ![](pics/teminal.png)
