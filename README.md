@@ -1,5 +1,5 @@
 
-![Message](https://img.shields.io/badge/First%20version-8A2BE2)
+![Message](https://img.shields.io/badge/Initial%20version-8A2BE2)
 ![GitHub Created At](https://img.shields.io/github/created-at/mhurk/Charge-battery)
 ![GitHub last commit](https://img.shields.io/github/last-commit/mhurk/Charge-battery)
 
