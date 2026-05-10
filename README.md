@@ -12,7 +12,7 @@ The following components are needed to setup this service. I mentioned the versi
 -   Home Assistant 2026.5.1
 -   [Alpha ESS HA integration](https://github.com/CharlesGillanders/homeassistant-alphaESS), version 0.8.4
 -   [Forecast.Solar](https://forecast.solar/), with personal account. This geves more frequent update then the free version.
--   [Nordpool](https://github.com/custom-components/nordpool) for price info, based on Apex but I found this to be more stable than Entso-e which had crashed my HA install a couple of times.
+-   [Nordpool](https://github.com/custom-components/nordpool) for price info, based on Epex but I found this to be more stable than Entso-e which had crashed my HA install a couple of times.
 -   [Pyscript](https://github.com/custom-components/pyscript) version 2.0.1, needed to run the script.
 -   Terminal & SSH for troubleshooting and testing.
 
