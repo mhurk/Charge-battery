@@ -96,4 +96,4 @@ Functions that are preceeded by <code>@service</code> are available to run manua
 If all is okay the charging plans are visible in the logfiles. These can be accessed on different ways but I prefer via the Terminal/SSH as that enables quick filtering. <code>ha core logs \| grep BatteryOpt</code> gives the most recent plan but make sure to do this quickly after sending the command otherwise is will be gone again (so a bit tricky)
 
 Example logfile entry:\
-![](pics/teminal.png)
+![](pics/terminal.png)
