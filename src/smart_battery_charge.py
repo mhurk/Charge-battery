@@ -3,12 +3,12 @@ from datetime import datetime, timedelta
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 BATTERY_CAPACITY_KWH = 9.3
-CHARGE_RATE_KW       = 2.4    # Your alphaESS max charge rate (kW)
+CHARGE_RATE_KW       = 4.8    # Your alphaESS max charge rate (kW)
 NIGHT_START_HOUR     = 23     # Start of cheap night window
 NIGHT_END_HOUR       = 6      # End of cheap window (next morning)
 MIN_CHARGE_KWH       = 0.5    # Skip if less than this is needed
-MAX_PRICE_EUR        = 0.25   # Never charge above this price (€/kWh)
-MIN_SOC_FLOOR_PCT    = 20     # Always charge to at least this SOC %
+MAX_PRICE_EUR        = 0.30   # Never charge above this price (€/kWh)
+MIN_SOC_FLOOR_PCT    = 30     # Always charge to at least this SOC %
 
 # ── Sensor entity IDs — adjust these to match YOUR setup ──────────────────────
 SOLAR_SENSOR    = "sensor.energy_production_tomorrow"
@@ -98,7 +98,16 @@ def _plan_charging():
     charge_minutes = slots_needed * 15
 
     all_slots  = _get_night_price_slots()
+    log.info(f"[BatteryOpt] Got {len(all_slots)} night slots from Nordpool")
     affordable = [s for s in all_slots if s["price"] <= MAX_PRICE_EUR]
+    log.info(f"[BatteryOpt] Affordable slots: {len(affordable)}")
+
+    try:
+        start_time, avg_price = _find_cheapest_window(affordable, slots_needed)
+        log.info(f"[BatteryOpt] Best window: {start_time} @ €{avg_price:.3f}")
+    except Exception as e:
+        log.error(f"[BatteryOpt] Error in _find_cheapest_window: {e}")
+        return 0, None, 0.0
 
     if not affordable:
         log.warning("[BatteryOpt] No slots below MAX_PRICE_EUR tonight")
@@ -118,11 +127,14 @@ def _plan_charging():
         log.warning("[BatteryOpt] No contiguous window found — using cheapest individual slots")
 
     if start_time:
-        _update_dashboard(
-            f"🔋 Charging {charge_minutes} min from {start_time.strftime('%H:%M')}",
-            f"Solar expected tomorrow: {solar_kwh:.1f} kWh | SOC: {soc_pct:.0f}% | "
-            f"Needed: {charge_needed:.1f} kWh | Avg: €{avg_price:.3f}/kWh"
-        )
+        try:
+            _update_dashboard(
+                f"🔋 Charging {charge_minutes} min from {start_time.strftime('%H:%M')}",
+                f"Solar: {solar_kwh:.1f} kWh | SOC: {soc_pct:.0f}% | "
+                f"Needed: {charge_needed:.1f} kWh | Avg: €{avg_price:.3f}/kWh"
+            )
+        except Exception as e:
+            log.error(f"[BatteryOpt] Error updating dashboard: {e}")
 
     return charge_minutes, start_time, avg_price
 
@@ -140,6 +152,7 @@ def _update_dashboard(status, detail):
 
 
 # ── Find cheapest contiguous window ───────────────────────────────────────────
+@service
 def _find_cheapest_window(slots, slots_needed):
     """Sliding window over sorted slots — find start of cheapest contiguous block."""
     ordered = sorted(slots, key=lambda x: x["time"])
@@ -150,15 +163,21 @@ def _find_cheapest_window(slots, slots_needed):
     for i in range(len(ordered) - slots_needed + 1):
         window = ordered[i : i + slots_needed]
 
-        # Check all slots are strictly contiguous
-        contiguous = all(
-            window[j + 1]["time"] == window[j]["time"] + timedelta(minutes=15)
-            for j in range(len(window) - 1)
-        )
+        # Check all slots are strictly contiguous (no generator expressions)
+        contiguous = True
+        for j in range(len(window) - 1):
+            if window[j + 1]["time"] != window[j]["time"] + timedelta(minutes=15):
+                contiguous = False
+                break
+
         if not contiguous:
             continue
 
-        avg = sum(s["price"] for s in window) / slots_needed
+        total = 0.0
+        for s in window:
+            total += s["price"]
+        avg = total / slots_needed
+
         if avg < best_avg:
             best_avg   = avg
             best_start = window[0]["time"]
@@ -168,27 +187,30 @@ def _find_cheapest_window(slots, slots_needed):
 
 # ── Price slot extraction ──────────────────────────────────────────────────────
 def _get_night_price_slots():
-    attrs = state.getattr(NORDPOOL_SENSOR)
-    if not attrs:
-        log.error(f"[BatteryOpt] Could not read {NORDPOOL_SENSOR}")
+    try:
+        attrs = state.getattr(NORDPOOL_SENSOR)
+        if not attrs:
+            log.warning(f"[BatteryOpt] Nordpool sensor returned no attributes")
+            return []
+        log.info(f"[BatteryOpt] Nordpool keys: {list(attrs.keys())}")
+
+        now         = datetime.now()
+        night_start = now.replace(hour=NIGHT_START_HOUR, minute=0, second=0, microsecond=0)
+        night_end   = (now + timedelta(days=1)).replace(
+                          hour=NIGHT_END_HOUR, minute=0, second=0, microsecond=0)
+
+        slots = []
+        for day_key in ["raw_today", "raw_tomorrow"]:
+            for entry in attrs.get(day_key, []):
+                slot_start = entry["start"]
+                if hasattr(slot_start, "tzinfo") and slot_start.tzinfo:
+                    slot_start = slot_start.replace(tzinfo=None)
+                if night_start <= slot_start < night_end:
+                    slots.append({"time": slot_start, "price": entry["value"]})
+        return slots
+    except Exception as e:
+        log.error(f"[BatteryOpt] Error reading Nordpool: {e}")
         return []
-
-    now         = datetime.now()
-    night_start = now.replace(hour=NIGHT_START_HOUR, minute=0, second=0, microsecond=0)
-    night_end   = (now + timedelta(days=1)).replace(
-                      hour=NIGHT_END_HOUR, minute=0, second=0, microsecond=0)
-
-    slots = []
-    for day_key in ["raw_today", "raw_tomorrow"]:
-        for entry in attrs.get(day_key, []):
-            slot_start = entry["start"]
-            if hasattr(slot_start, "tzinfo") and slot_start.tzinfo:
-                slot_start = slot_start.replace(tzinfo=None)
-            if night_start <= slot_start < night_end:
-                slots.append({"time": slot_start, "price": entry["value"]})
-
-    return slots
-
 
 # ── Button press logic ─────────────────────────────────────────────────────────
 def _press_charge_buttons(total_minutes):

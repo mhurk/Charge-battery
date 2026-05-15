@@ -37,15 +37,16 @@ logger:
 To enable the logger to log all activities. This is needed for debugging and to check what happened. HA needs to be restarted after this.
 
 Make changes to <code>smart_battery_charg.py</code> such that it matches your system and wishes. If you have renamed your Alpha ESS you need to change that here as well. I just use the default name with the serial numbers. Also update the NordPool sensor for your situation. The script uses the 15, 30, and 60 minute charge buttons which are available in the Alpha ESS integration. It basically presses these buttons during the night if the requirements (low price and low solar power next day) are met.
+The Charge Rate is measured on two different occasions. Close enough to the theoretical maximum of 5.04 kWh/hour of my setup.
 
 ```         
 BATTERY_CAPACITY_KWH = 9.3
-CHARGE_RATE_KW       = 2.4    # Your alphaESS max charge rate (kW)
+CHARGE_RATE_KW       = 4.8    # Your alphaESS max charge rate (kW)
 NIGHT_START_HOUR     = 23     # Start of cheap night window
 NIGHT_END_HOUR       = 6      # End of cheap window (next morning)
 MIN_CHARGE_KWH       = 0.5    # Skip if less than this is needed
-MAX_PRICE_EUR        = 0.25   # Never charge above this price (€/kWh)
-MIN_SOC_FLOOR_PCT    = 20     # Always charge to at least this SOC %
+MAX_PRICE_EUR        = 0.30   # Never charge above this price (€/kWh)
+MIN_SOC_FLOOR_PCT    = 30     # Always charge to at least this SOC %
 
 SOLAR_SENSOR    = "sensor.energy_production_tomorrow"
 SOC_SENSOR      = "sensor.alpha_ess_energy_statistics_ald071026xxxxxx_ald071026xxxxxx_instantaneous_battery_soc"
