@@ -39,6 +39,8 @@ To enable the logger to log all activities. This is needed for debugging and to 
 Make changes to <code>smart_battery_charg.py</code> such that it matches your system and wishes. If you have renamed your Alpha ESS you need to change that here as well. I just use the default name with the serial numbers. Also update the NordPool sensor for your situation. The script uses the 15, 30, and 60 minute charge buttons which are available in the Alpha ESS integration. It basically presses these buttons during the night if the requirements (low price and low solar power next day) are met.
 The Charge Rate is measured on two different occasions. Close enough to the theoretical maximum of 5.04 kWh/hour of my setup.
 
+Nightly consumption is relevant as there is some time between planning the best charging moment and the actual charging. During that period the battery drains due to base consumption by stand-by equipment, boiler, refridgerator and such. I found this to be around a constant use of 350 W. This is (much) higher during the winter as the heatpump is running to keep the house warm. Currently estimated at a constant use of 800 W during the night. Charging an electric car is not included in this. Also be aware this is an average number which may fluctuuate a lot due to additional use by for example a running dishwasher.
+
 ```env         
 BATTERY_CAPACITY_KWH = 9.3
 CHARGE_RATE_KW       = 4.8    # Your alphaESS max charge rate (kW)
@@ -48,6 +50,15 @@ MIN_CHARGE_KWH       = 0.5    # Skip if less than this is needed
 MAX_PRICE_EUR        = 0.30   # Never charge above this price (€/kWh)
 MIN_SOC_FLOOR_PCT    = 30     # Always charge to at least this SOC %
 
+# Seasonal base consumption
+MONTH = datetime.now().month
+if MONTH in [11, 12, 1, 2]:     # Winter months
+    BASE_CONSUMPTION_KW = 0.80  # Higher due to heatpump
+else:
+    BASE_CONSUMPTION_KW = 0.35  # Summer base load
+
+
+# ── Sensor entity IDs — adjust these to match YOUR setup ──────────────────────
 SOLAR_SENSOR    = "sensor.energy_production_tomorrow"
 SOC_SENSOR      = "sensor.alpha_ess_energy_statistics_ald071026xxxxxx_ald071026xxxxxx_instantaneous_battery_soc"
 NORDPOOL_SENSOR = "sensor.nordpool_kwh_nl_eur_3_095_021"

@@ -10,6 +10,14 @@ MIN_CHARGE_KWH       = 0.5    # Skip if less than this is needed
 MAX_PRICE_EUR        = 0.30   # Never charge above this price (€/kWh)
 MIN_SOC_FLOOR_PCT    = 30     # Always charge to at least this SOC %
 
+# Seasonal base consumption
+MONTH = datetime.now().month
+if MONTH in [11, 12, 1, 2]:     # Winter months
+    BASE_CONSUMPTION_KW = 0.80  # Higher due to heatpump
+else:
+    BASE_CONSUMPTION_KW = 0.35  # Summer base load
+
+
 # ── Sensor entity IDs — adjust these to match YOUR setup ──────────────────────
 SOLAR_SENSOR    = "sensor.energy_production_tomorrow"
 SOC_SENSOR      = "sensor.alpha_ess_energy_statistics_ald071026xxxxxx_ald071026xxxxxx_instantaneous_battery_soc"
@@ -102,13 +110,6 @@ def _plan_charging():
     affordable = [s for s in all_slots if s["price"] <= MAX_PRICE_EUR]
     log.info(f"[BatteryOpt] Affordable slots: {len(affordable)}")
 
-    try:
-        start_time, avg_price = _find_cheapest_window(affordable, slots_needed)
-        log.info(f"[BatteryOpt] Best window: {start_time} @ €{avg_price:.3f}")
-    except Exception as e:
-        log.error(f"[BatteryOpt] Error in _find_cheapest_window: {e}")
-        return 0, None, 0.0
-
     if not affordable:
         log.warning("[BatteryOpt] No slots below MAX_PRICE_EUR tonight")
         _update_dashboard(
@@ -117,13 +118,43 @@ def _plan_charging():
         )
         return 0, None, 0.0
 
-    start_time, avg_price = _find_cheapest_window(affordable, slots_needed)
+    # First pass — find cheapest window for initial charge estimate
+    try:
+        start_time, avg_price = _find_cheapest_window(affordable, slots_needed)
+        log.info(f"[BatteryOpt] First pass window: {start_time} @ €{avg_price:.3f}")
+    except Exception as e:
+        log.error(f"[BatteryOpt] Error in _find_cheapest_window: {e}")
+        return 0, None, 0.0
+
+    # Second pass — adjust for base consumption drain between now and charge start
+    if start_time is not None:
+        now                    = datetime.now()
+        hours_until_charge     = (start_time - now).total_seconds() / 3600
+        extra_drain_kwh        = max(0.0, hours_until_charge * BASE_CONSUMPTION_KW)
+        charge_needed_adjusted = charge_needed + extra_drain_kwh
+        slots_needed_adjusted  = math.ceil((charge_needed_adjusted / CHARGE_RATE_KW) * 4)
+        charge_minutes         = slots_needed_adjusted * 15
+        log.info(
+            f"[BatteryOpt] Extra drain: {extra_drain_kwh:.2f} kWh over {hours_until_charge:.1f} hrs | "
+            f"Adjusted needed: {charge_needed_adjusted:.1f} kWh"
+        )
+        try:
+            start_time, avg_price = _find_cheapest_window(affordable, slots_needed_adjusted)
+            log.info(f"[BatteryOpt] Second pass window: {start_time} @ €{avg_price:.3f}")
+        except Exception as e:
+            log.error(f"[BatteryOpt] Error in second _find_cheapest_window: {e}")
+            return 0, None, 0.0
+    else:
+        slots_needed_adjusted = slots_needed
 
     if start_time is None:
         # Not enough contiguous affordable slots — use cheapest individual slots
-        cheapest   = sorted(affordable, key=lambda x: x["price"])[:slots_needed]
+        cheapest   = sorted(affordable, key=lambda x: x["price"])[:slots_needed_adjusted]
         start_time = sorted(cheapest, key=lambda x: x["time"])[0]["time"]
-        avg_price  = sum(s["price"] for s in cheapest) / len(cheapest)
+        total_price = 0.0
+        for s in cheapest:
+            total_price += s["price"]
+        avg_price  = total_price / len(cheapest)
         log.warning("[BatteryOpt] No contiguous window found — using cheapest individual slots")
 
     if start_time:
@@ -138,6 +169,8 @@ def _plan_charging():
 
     return charge_minutes, start_time, avg_price
 
+
+# ── Update the Dashoard ───────────────────────────────────────────────────────
 def _update_dashboard(status, detail):
     """Write plan summary to input_text helpers for dashboard display."""
     now = datetime.now().strftime("%d %b %H:%M")
